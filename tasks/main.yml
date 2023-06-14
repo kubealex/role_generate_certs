@@ -1,0 +1,94 @@
+---
+# tasks file for role_generate_certs
+- name: Fail fast if CA path is missing
+  when: ca_path is not defined or ca_key_path is not defined or ca_key_passphrase is not defined
+  ansible.builtin.fail:
+    msg: "The following variables need to be specified: ca_path, ca_key_path, ca_key_passphrase"
+
+- name: Set relevant facts
+  ansible.builtin.set_fact:
+    _ash_cert_key_path: "{{ playbook_dir + '/' + ash_cert_filename + '.key' }}"
+    _ash_cert_path: "{{ playbook_dir + '/' + ash_cert_filename + '.pem' }}"
+
+- name: Create private key for new certificate
+  delegate_to: localhost
+  community.crypto.openssl_privatekey:
+    path: "{{ _ash_cert_key_path }}"
+
+- name: Create certificate signing request (CSR) for new certificate
+  delegate_to: localhost
+  community.crypto.openssl_csr_pipe:
+    common_name: "{{ ash_cert_cn }}"
+    country_name: "{{ ash_cert_c }}"
+    locality_name: "{{ ash_cert_l }}"
+    organization_name: "{{ ash_cert_o }}"
+    organizational_unit_name: "{{ ash_cert_ou }}"
+    privatekey_path: "{{ _ash_cert_key_path }}"
+    subject_alt_name: "{{ ash_cert_san }}"
+  register: _cert_csr
+
+- name: Check whether certificate exists
+  delegate_to: localhost
+  ansible.builtin.stat:
+    path: "{{ _ash_cert_path }}"
+  register: _cert_exists
+
+- name: Read existing certificate if exists
+  delegate_to: localhost
+  ansible.builtin.slurp:
+    path: "{{ _ash_cert_path }}"
+  when: _cert_exists.stat.exists
+  register: _certificate
+
+- name: Sign certificate with own CA
+  delegate_to: localhost
+  community.crypto.x509_certificate_pipe:
+    content: "{{ (_certificate.content | b64decode) if _cert_exists.stat.exists else omit }}"
+    csr_content: "{{ _cert_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ ash_ca_path }}"
+    ownca_privatekey_path: "{{ ash_ca_key_path }}"
+    ownca_privatekey_passphrase: "{{ ash_ca_key_passphrase }}"
+    ownca_not_after: +365d  # valid for one year
+    ownca_not_before: "-1d"  # valid since yesterday
+  register: _certificate
+  notify:
+    - Write certificate file
+
+- name: Ensure writing cert file
+  ansible.builtin.meta:
+    flush_handlers
+
+- name: Ensure destination path exists
+  ansible.builtin.file:
+    state: directory
+    mode: "0755"
+    path: "{{ ash_ca_destination_path }}"
+
+
+- name: Bundle certs in archive
+  when: ash_create_archive
+  community.general.archive:
+    path:
+      - "{{ _ash_cert_path }}"
+      - "{{ _ash_cert_key_path }}"
+    dest: "{{ ash_ca_destination_path }}/{{ ash_cert_filename }}.tgz"
+    mode: "0755"
+
+- name: Copy files to destination path
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ ash_cert_destination_path }}"
+    mode: "0755"
+  loop:
+    - "{{ _ash_cert_path }}"
+    - "{{ _ash_cert_key_path }}"
+
+- name: Clean up temporary certs
+  delegate_to: localhost
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ _ash_cert_path }}"
+    - "{{ _ash_cert_key_path }}"

@@ -1,0 +1,5 @@
+- name: Write certificate file
+  ansible.builtin.copy:
+    dest: "{{ _ash_cert_path }}"
+    content: "{{ _certificate.certificate }}"
+    mode: "0755"
