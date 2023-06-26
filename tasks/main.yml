@@ -63,8 +63,7 @@
   ansible.builtin.file:
     state: directory
     mode: "0755"
-    path: "{{ ash_ca_destination_path }}"
-
+    path: "{{ ash_cert_destination_path }}"
 
 - name: Bundle certs in archive
   when: ash_create_archive
@@ -72,7 +71,7 @@
     path:
       - "{{ _ash_cert_path }}"
       - "{{ _ash_cert_key_path }}"
-    dest: "{{ ash_ca_destination_path }}/{{ ash_cert_filename }}.tgz"
+    dest: "{{ ash_cert_destination_path }}/{{ ash_cert_filename }}.tgz"
     mode: "0755"
 
 - name: Copy files to destination path
