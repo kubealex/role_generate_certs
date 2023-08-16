@@ -52,8 +52,14 @@
     ownca_not_after: +365d  # valid for one year
     ownca_not_before: "-1d"  # valid since yesterday
   register: _certificate
-  notify:
-    - Write certificate file
+
+- name: Write certificate file
+  ansible.builtin.copy:
+    dest: "{{ _ash_cert_path }}"
+    content: "{{ _certificate.certificate }}"
+    mode: "0755"
+  when: _certificate is changed
+
 
 - name: Ensure writing cert file
   ansible.builtin.meta:
