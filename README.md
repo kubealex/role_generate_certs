@@ -25,6 +25,7 @@ Role Variables
 | `cert_O`                   | Organization Name (O) for the generated certificate       | `My Company`                 |
 | `cert_OU`                  | Organizational Unit Name (OU) for the generated certificate | `My Lab`                  |
 | `cert_san`                 | Subject Alternative Names (SAN) for the generated certificate | *omit*                     |
+| `cert_generate_pkcs`       | Generate PKCS file for key, cert and CA                   | false                     |
 | `archive_certs`            | Flag indicating whether to create an archive of the certificates | `false`                  |
 
 

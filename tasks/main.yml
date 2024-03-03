@@ -9,6 +9,7 @@
   ansible.builtin.set_fact:
     _ash_cert_key_path: "{{ playbook_dir + '/' + ash_cert_filename + '.key' }}"
     _ash_cert_path: "{{ playbook_dir + '/' + ash_cert_filename + '.pem' }}"
+    _ash_pkcs_path: "{{ (playbook_dir + '/' + ash_cert_filename + '.p12') if ash_cert_generate_pkcs else '' }}"
 
 - name: Create private key for new certificate
   delegate_to: localhost
@@ -49,8 +50,8 @@
     ownca_path: "{{ ash_ca_path }}"
     ownca_privatekey_path: "{{ ash_ca_key_path }}"
     ownca_privatekey_passphrase: "{{ ash_ca_key_passphrase }}"
-    ownca_not_after: +365d  # valid for one year
-    ownca_not_before: "-1d"  # valid since yesterday
+    ownca_not_after: +365d
+    ownca_not_before: "-1d"
   register: _certificate
 
 - name: Write certificate file
@@ -60,10 +61,20 @@
     mode: "0755"
   when: _certificate is changed
 
-
 - name: Ensure writing cert file
   ansible.builtin.meta:
     flush_handlers
+
+- name: Generate PKCS#12 file
+  when: ash_cert_generate_pkcs
+  community.crypto.openssl_pkcs12:
+    action: export
+    path: "{{ _ash_pkcs_path }}"
+    privatekey_path: "{{ _ash_cert_key_path }}"
+    certificate_path: "{{ _ash_cert_path }}"
+    other_certificates: "{{ ash_ca_path }}"
+    other_certificates_parse_all: true
+    state: present
 
 - name: Ensure destination path exists
   ansible.builtin.file:
@@ -77,6 +88,7 @@
     path:
       - "{{ _ash_cert_path }}"
       - "{{ _ash_cert_key_path }}"
+      - "{{ _ash_pkcs_path if ash_cert_generate_pkcs else '' }}"
     dest: "{{ ash_cert_destination_path }}/{{ ash_cert_filename }}.tgz"
     mode: "0755"
 
@@ -88,6 +100,8 @@
   loop:
     - "{{ _ash_cert_path }}"
     - "{{ _ash_cert_key_path }}"
+    - "{{ _ash_pkcs_path }}"
+  when: (item == _ash_pkcs_path and _ash_pkcs_path != '') or item != _ash_pkcs_path  
 
 - name: Clean up temporary certs
   delegate_to: localhost
@@ -97,3 +111,5 @@
   loop:
     - "{{ _ash_cert_path }}"
     - "{{ _ash_cert_key_path }}"
+    - "{{ _ash_pkcs_path }}"
+  when: (item == _ash_pkcs_path and _ash_pkcs_path != '') or item != _ash_pkcs_path  
