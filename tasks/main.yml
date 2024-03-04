@@ -69,6 +69,7 @@
   when: ash_cert_generate_pkcs
   community.crypto.openssl_pkcs12:
     action: export
+    friendly_name: "{{ ash_cert_filename }}"
     path: "{{ _ash_pkcs_path }}"
     privatekey_path: "{{ _ash_cert_key_path }}"
     certificate_path: "{{ _ash_cert_path }}"
@@ -101,7 +102,7 @@
     - "{{ _ash_cert_path }}"
     - "{{ _ash_cert_key_path }}"
     - "{{ _ash_pkcs_path }}"
-  when: (item == _ash_pkcs_path and _ash_pkcs_path != '') or item != _ash_pkcs_path  
+  when: (item == _ash_pkcs_path and _ash_pkcs_path != '') or item != _ash_pkcs_path
 
 - name: Clean up temporary certs
   delegate_to: localhost
@@ -112,4 +113,4 @@
     - "{{ _ash_cert_path }}"
     - "{{ _ash_cert_key_path }}"
     - "{{ _ash_pkcs_path }}"
-  when: (item == _ash_pkcs_path and _ash_pkcs_path != '') or item != _ash_pkcs_path  
+  when: (item == _ash_pkcs_path and _ash_pkcs_path != '') or item != _ash_pkcs_path
