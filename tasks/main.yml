@@ -26,7 +26,7 @@
     organizational_unit_name: "{{ ash_cert_ou }}"
     privatekey_path: "{{ _ash_cert_key_path }}"
     subject_alt_name: "{{ ash_cert_san }}"
-    key_usage: "{{ ash_cert_usage | default(omit, true) }}"
+    key_usage: "{{ ash_cert_usage }}"
   register: _cert_csr
 
 - name: Check whether certificate exists
